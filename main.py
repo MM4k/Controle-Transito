@@ -16,20 +16,34 @@ def sensor_b_callback(channel):
         delta_t = time.time() - tempo_inicio
         # velocidade = (d/dt)*3.6
         velocidade = (2.0/delta_t) * 3.6
-        print('Velocidade: {velocidade.2f}km/h')
+        print(f'Velocidade: {velocidade:.2f}km/h')
         tempo_inicio = 0
 
 def botao_pedestre_callback(channel):
-    print('Botão no pino {channel} pressionado.')
+    print(f'Botão no pino {channel} pressionado.')
+
+def enviar_estado_semaforo(pino_bits, codigo):
+    for i in range(3):
+        estado = (codigo >> i) & 1
+        gpio.set_output(pino_bits[i], estado)
     
-# Configuração de saídas do Semáforo C1
-for pin in config.SEMAFORO_C1:
+# Configuração de saídas dos Semáforos C1 e C2
+for pin in config.SEMAFORO_C1 + config.SEMAFORO_C2:
     gpio.setup_output(pin)
 
-# Configuração de entradas com interrupt (Ex: Sensor 1 e Botão 1)
+# Configuração de entradas com interrupt para todos os botões
+botoes_interrupt = [
+    config.BOTOES['C1_P'],
+    config.BOTOES['C1_T'],
+    config.BOTOES['C2_P'],
+    config.BOTOES['C2_T'],
+]
+
+for pin_botao in botoes_interrupt:
+    gpio.setup_input_interrupt(pin_botao, botao_pedestre_callback)
+
 gpio.setup_input_interrupt(config.SENSORES['S1']['A'], sensor_a_callback)
 gpio.setup_input_interrupt(config.SENSORES['S1']['B'], sensor_b_callback)
-gpio.setup_input_interrupt(config.BOTOES['C1_P'], botao_pedestre_callback)
 
 gpio.setup_input_polling(config.BOTOES['C1_T'])
 gpio.setup_input_polling(config.BOTOES['C1_P'])
@@ -37,14 +51,19 @@ gpio.setup_input_polling(config.BOTOES['C1_P'])
 try:
     print('Módulo GPIO ativo.')
     while True:
+        for codigo_cor in range(8):
+            enviar_estado_semaforo(config.SEMAFORO_C1, codigo_cor)
+            enviar_estado_semaforo(config.SEMAFORO_C2, codigo_cor)
+            time.sleep(3)
         # Exemplo de Polling
         if gpio.get_input(config.BOTOES['C1_T']):
             print('Polling: Botão de Travessia C1 pressionado.')
-        # Exemplo de saída
-        gpio.set_output(config.SEMAFORO_C1[0], True)
-        time.sleep(1)
-        gpio.set_output(config.SEMAFORO_C1[0], False)
-        time.sleep(1)
+        if gpio.get_input(config.BOTOES['C1_P']):
+            print('Polling: Botão de Pedestre Principal C1 pressionado.')
+        if gpio.get_input(config.BOTOES['C2_T']):
+            print('Polling: Botão de Travessia C2 pressionado.')
+        if gpio.get_input(config.BOTOES['C2_P']):
+            print('Polling: Botão de Pedestre Principal C1 pressionado.')
 
 except KeyboardInterrupt:
     gpio.cleanup()
