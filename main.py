@@ -31,6 +31,9 @@ gpio.setup_input_interrupt(config.SENSORES['S1']['A'], sensor_a_callback)
 gpio.setup_input_interrupt(config.SENSORES['S1']['B'], sensor_b_callback)
 gpio.setup_input_interrupt(config.BOTOES['C1_P'], botao_pedestre_callback)
 
+gpio.setup_input_polling(config.BOTOES['C1_T'])
+gpio.setup_input_polling(config.BOTOES['C1_P'])
+
 try:
     print('Módulo GPIO ativo.')
     while True:
@@ -42,6 +45,6 @@ try:
         time.sleep(1)
         gpio.set_output(config.SEMAFORO_C1[0], False)
         time.sleep(1)
-        
+
 except KeyboardInterrupt:
     gpio.cleanup()
